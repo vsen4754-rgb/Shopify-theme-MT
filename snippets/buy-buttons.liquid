@@ -1,0 +1,1632 @@
+{% comment %}
+  Renders product buy-buttons.
+  Accepts:
+  - product: {Object} product object.
+  - block: {Object} passing the block information.
+  - product_form_id: {String} product form id.
+  - section_id: {String} id of section to which this snippet belongs.
+  - show_pickup_availability: {Boolean} for the pickup availability. If true the pickup availability is rendered, false - not rendered (optional).
+
+  Usage:
+  {% render 'buy-buttons', block: block, product: product, product_form_id: product_form_id, section_id: section.id, show_pickup_availability: true %}
+{% endcomment %}
+<div {{ block.shopify_attributes }}>
+  {%- if product != blank -%}
+    {%- liquid
+      assign gift_card_recipient_feature_active = false
+      if block.settings.show_gift_card_recipient and product.gift_card?
+        assign gift_card_recipient_feature_active = true
+      endif
+
+      assign show_dynamic_checkout = false
+      if block.settings.show_dynamic_checkout and gift_card_recipient_feature_active == false
+        assign show_dynamic_checkout = true
+      endif
+    -%}
+
+    <product-form
+      class="product-form"
+      data-hide-errors="{{ gift_card_recipient_feature_active }}"
+      data-section-id="{{ section.id }}"
+    >
+      <div class="product-form__error-message-wrapper" role="alert" hidden>
+        <span class="svg-wrapper">
+          {{- 'icon-error.svg' | inline_asset_content -}}
+        </span>
+        <span class="product-form__error-message"></span>
+      </div>
+
+      {%- form 'product',
+        product,
+        id: product_form_id,
+        class: 'form',
+        novalidate: 'novalidate',
+        data-type: 'add-to-cart-form'
+      -%}
+        <input
+          type="hidden"
+          name="id"
+          value="{{ product.selected_or_first_available_variant.id }}"
+          {% if product.selected_or_first_available_variant.available == false
+            or quantity_rule_soldout
+            or product.selected_or_first_available_variant == null
+          %}
+            disabled
+          {% endif %}
+          class="product-variant-id"
+        >
+
+        {%- if gift_card_recipient_feature_active -%}
+          {%- render 'gift-card-recipient-form', product: product, form: form, section: section -%}
+        {%- endif -%}
+      {% comment %}
+            Monogramming Section for Product Page
+          {% endcomment %} 
+            <!-- Your hidden input for monogram values -->
+            <!-- Hidden input -->
+
+            <div class="monogram-wrapper">
+              <!-- Button (default top) -->
+              <button type="button" id="toggle-monogram" class="monogram-btn">
+                {{ settings['Monogramming-bnt-add'] }}
+              </button>
+              <!-- Hidden Content -->
+              <div id="monogram-box" class="monogram-box" style="display:none;">
+                <!-- Blanket Options (Top Section) -->
+                <input
+                  type="hidden"
+                  id="monogramInput"
+                  name="properties[Value]"
+                  value=""
+                >
+                <div class="blanket-options">
+                  {% comment %} <h4>Blanket Options</h4> {% endcomment %}
+                  <div class="blanket-row">
+                    <span class="blanket-label"></span>
+                    <div class="accordion">
+                      <div class="accordion-header">
+                        <span>{{ settings.Blanket1 }}</span>
+                        <span class="accordion-arrow1">
+                          <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6.59 8.59 12 14l5.41-5.41L19 10l-7 7-7-7z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div class="accordion-content">
+                        <div class="mogogram-tab">
+                          <h3>{{ settings.Monogramming }}</h3>
+                          <p>{{ settings.Monogramming1 }}</p>
+
+                          {% comment %} <input type="range" id="zoom-range" min="1" max="3" step="0.1" value="1"> {% endcomment %}
+                          <div class="monogram-content">
+                            <!-- Image Preview -->
+                            <div class="monogram-image-box">
+                              <div class="zoom-container" id="zoom-container">
+                                <img
+                                  id="zoom-image"
+                                  src="{{ product.metafields.custom.monogram_image | img_url: '600x' }}"
+                                  alt="Monogram Image"
+                                >
+                                <span class="monogram-preview"></span>
+                              </div>
+                            </div>
+
+                            <!-- Options -->
+                            <div class="monogram-options">
+                              {% assign font = shop.metaobjects.monogram_fonts.values %}
+                              {% if shop.metaobjects.monogram_fonts.values != blank %}
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <style>
+                                    @font-face {
+                                      font-family: '{{ font.font_name.value }}';
+                                      src: url('{{ font.font_url1.value }}') format('woff2');
+                                      font-display: swap;
+                                    }
+                                  </style>
+                                {% endfor %}
+                              {% endif %}
+
+                              <label for="monogram-style">{{ settings.Style }}</label>
+                              <select
+                                class="monogram-style"
+                                id="monogram-style"
+                                name="properties[ Blanket 1 Style]"
+                              >
+                                <option value="" disabled selected>{{ settings.Choose_Style }}</option>
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <option value="{{ font.font_name.value }}" data-url="{{ font.font_url1.value }}">
+                                    {{ font.font_name.value }}
+                                  </option>
+                                {% endfor %}
+                              </select>
+                              <label>{{ settings.Choose_color }}</label>
+                              <select class="monogram-color" name="properties[Blanket 1 Color]" class="blanket-color">
+                                <option value="" disabled selected>{{ settings.Choose_color }}</option>
+
+                                {% assign color_list = product.metafields.custom.monogram_colors1.value %}
+                                {% if color_list %}
+                                  {% for color in color_list %}
+                                    <option value="{{ color | escape }}">{{ color }}</option>
+                                  {% endfor %}
+                                {% endif %}
+                              </select>
+
+                              <label for="monogram-text">{{ settings['text-cu'] }}</label>
+                              <div class="monogram-text-box">
+                                <input
+                                  type="text"
+                                  maxlength="10"
+                                  placeholder="Enter monogram"
+                                  class="monogram-input"
+                                  name="properties[Blanket 1 Text]"
+                                >
+                              </div>
+                            </div>
+                          </div>
+                          <p class="monogram-note">
+                            {{ settings.Monogramming2 }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="blanket-row">
+                    <span class="blanket-label"></span>
+                    <div class="accordion">
+                      <div class="accordion-header">
+                        <span>{{ settings.Blanket2 }}</span>
+                        <span class="accordion-arrow1">
+                          <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6.59 8.59 12 14l5.41-5.41L19 10l-7 7-7-7z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div class="accordion-content">
+                        <div class="mogogram-tab">
+                          <h3>{{ settings.Monogramming }}</h3>
+                          <p>{{ settings.Monogramming1 }}</p>
+
+                          {% comment %} <input type="range" id="zoom-range" min="1" max="3" step="0.1" value="1"> {% endcomment %}
+                          <div class="monogram-content">
+                            <!-- Image Preview -->
+                            <div class="monogram-image-box">
+                              <div class="zoom-container" id="zoom-container">
+                                <img
+                                  id="zoom-image"
+                                  src="{{ product.metafields.custom.monogram_image | img_url: '600x' }}"
+                                  alt="Monogram Image"
+                                >
+                                <span class="monogram-preview1"></span>
+                              </div>
+                            </div>
+
+                            <!-- Options -->
+                            <div class="monogram-options">
+                              {% assign font = shop.metaobjects.monogram_fonts.values %}
+                              {% if shop.metaobjects.monogram_fonts.values != blank %}
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <style>
+                                    @font-face {
+                                      font-family: '{{ font.font_name.value }}';
+                                      src: url('{{ font.font_url1.value }}') format('woff2');
+                                      font-display: swap;
+                                    }
+                                  </style>
+                                {% endfor %}
+                              {% endif %}
+
+                              <label for="monogram-style">{{ settings.Style }}</label>
+                              <select
+                                class="monogram-style1"
+                                id="monogram-style"
+                                name="properties[ Blanket 2 Style]"
+                              >
+                                <option value="" disabled selected>{{ settings.Choose_Style }}</option>
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <option value="{{ font.font_name.value }}" data-url="{{ font.font_url1.value }}">
+                                    {{ font.font_name.value }}
+                                  </option>
+                                {% endfor %}
+                              </select>
+
+                              {% comment %}
+                                <label for="monogram-color">{{ settings.color }}</label>
+                                <div class="custom-select-wrapper">
+                                  <div class="custom-select" id="monogram-color">
+                                    <div class="custom-select-trigger">
+                                      <span class="selected-color">
+                                        <span class="color-name">Choose A Color</span>
+                                        <span
+                                          class="color-swatch custom-class"
+                                          style="display: none;"
+                                          style="background: {{ color }}"
+                                        ></span>
+                                      </span>
+                                      <div class="arrow"></div>
+                                    </div>
+                                    <div class="custom-options">
+                                      {% if product.metafields.custom.monogram_colors1 != blank %}
+                                        {% for color in product.metafields.custom.monogram_colors1.value %}
+                                          <span class="custom-option" data-value="{{ color }}">
+                                            <span class="color-name">{{ color }}</span>
+                                            <span class="color-swatch" style="background: {{ color | downcase }}"></span>
+                                          </span>
+                                        {% endfor %}
+                                      {% endif %}
+                                    </div>
+                                  </div>
+                                  <input type="hidden" name="properties[Monogram Color]" required>
+                                </div>
+                              {% endcomment %}
+                              <label>{{ settings.Choose_color }}</label>
+                              <select class="monogram-color1" name="properties[Blanket 2 Color]" class="blanket-color">
+                                <option value="" disabled selected>{{ settings.Choose_color }}</option>
+
+                                {% assign color_list = product.metafields.custom.monogram_colors1.value %}
+                                {% if color_list %}
+                                  {% for color in color_list %}
+                                    <option value="{{ color | escape }}">{{ color }}</option>
+                                  {% endfor %}
+                                {% endif %}
+                              </select>
+
+                              <label for="monogram-text">{{ settings['text-cu'] }}</label>
+                              <div class="monogram-text-box">
+                                <input
+                                  type="text"
+                                  maxlength="10"
+                                  placeholder="Enter monogram"
+                                  class="monogram-input1"
+                                  name="properties[ Blanket 2 Text]"
+                                >
+                              </div>
+                            </div>
+                          </div>
+                          <p class="monogram-note">
+                            {{ settings.Monogramming2 }}
+                          </p>
+
+                          {% comment %}
+                            <label class="monogram-check" id="monogram-label">
+                              <input type="checkbox" id="monogram-confirm" required>
+                              {{ settings.Monogramming3 }}
+                            </label>
+                          {% endcomment %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="blanket-row">
+                    <span class="blanket-label"></span>
+                    <div class="accordion">
+                      <div class="accordion-header">
+                        <span>{{ settings.Blanket3 }}</span>
+                        <span class="accordion-arrow1">
+                          <svg class="accordion-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6.59 8.59 12 14l5.41-5.41L19 10l-7 7-7-7z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div class="accordion-content">
+                        <div class="mogogram-tab">
+                          <h3>{{ settings.Monogramming }}</h3>
+                          <p>{{ settings.Monogramming1 }}</p>
+
+                          {% comment %} <input type="range" id="zoom-range" min="1" max="3" step="0.1" value="1"> {% endcomment %}
+                          <div class="monogram-content">
+                            <!-- Image Preview -->
+                            <div class="monogram-image-box">
+                              <div class="zoom-container" id="zoom-container">
+                                <img
+                                  id="zoom-image"
+                                  src="{{ product.metafields.custom.monogram_image | img_url: '600x' }}"
+                                  alt="Monogram Image"
+                                >
+                                <span class="monogram-preview2"></span>
+                              </div>
+                            </div>
+
+                            <!-- Options -->
+                            <div class="monogram-options">
+                              {% assign font = shop.metaobjects.monogram_fonts.values %}
+                              {% if shop.metaobjects.monogram_fonts.values != blank %}
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <style>
+                                    @font-face {
+                                      font-family: '{{ font.font_name.value }}';
+                                      src: url('{{ font.font_url1.value }}') format('woff2');
+                                      font-display: swap;
+                                    }
+                                  </style>
+                                {% endfor %}
+                              {% endif %}
+                              <label for="monogram-style">{{ settings.Style }}</label>
+                              <select
+                                class="monogram-style2"
+                                id="monogram-style"
+                                name="properties[ Blanket 3 Style]"
+                              >
+                                <option value="" disabled selected>{{ settings.Choose_Style }}</option>
+                                {% for font in shop.metaobjects.monogram_fonts.values %}
+                                  <option value="{{ font.font_name.value }}" data-url="{{ font.font_url1.value }}">
+                                    {{ font.font_name.value }}
+                                  </option>
+                                {% endfor %}
+                              </select>
+
+                              {% comment %}
+                                <label for="monogram-color">{{ settings.color }}</label>
+                                <div class="custom-select-wrapper">
+                                  <div class="custom-select" id="monogram-color">
+                                    <div class="custom-select-trigger">
+                                      <span class="selected-color">
+                                        <span class="color-name">Choose A Color</span>
+                                        <span
+                                          class="color-swatch custom-class"
+                                          style="display: none;"
+                                          style="background: {{ color }}"
+                                        ></span>
+                                      </span>
+                                      <div class="arrow"></div>
+                                    </div>
+                                    <div class="custom-options">
+                                      {% if product.metafields.custom.monogram_colors1 != blank %}
+                                        {% for color in product.metafields.custom.monogram_colors1.value %}
+                                          <span class="custom-option" data-value="{{ color }}">
+                                            <span class="color-name">{{ color }}</span>
+                                            <span class="color-swatch" style="background: {{ color | downcase }}"></span>
+                                          </span>
+                                        {% endfor %}
+                                      {% endif %}
+                                    </div>
+                                  </div>
+                                  <input type="hidden" name="properties[Monogram Color]" required>
+                                </div>
+                              {% endcomment %}
+                              <label>{{ settings.Choose_color }}</label>
+                              <select class="monogram-color2" name="properties[Blanket 3 Color]" class="blanket-color">
+                                <option value="" disabled selected>{{ settings.Choose_color }}</option>
+
+                                {% assign color_list = product.metafields.custom.monogram_colors1.value %}
+                                {% if color_list %}
+                                  {% for color in color_list %}
+                                    <option value="{{ color | escape }}">{{ color }}</option>
+                                  {% endfor %}
+                                {% endif %}
+                              </select>
+                              <label for="monogram-text">{{ settings['text-cu'] }}</label>
+                              <div class="monogram-text-box">
+                                <input
+                                  type="text"
+                                  class="monogram-input2"
+                                  maxlength="10"
+                                  placeholder="Enter monogram"
+                                  name="properties[Blanket 3 Text]"
+                                >
+                              </div>
+                            </div>
+                          </div>
+                          <p class="monogram-note">
+                            {{ settings.Monogramming2 }}
+                          </p>
+
+                          {% comment %}
+                            <label class="monogram-check" id="monogram-label">
+                              <input type="checkbox" id="monogram-confirm" required>
+                              {{ settings.Monogramming3 }}
+                            </label>
+                          {% endcomment %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mogogram-tab-first-bln">
+                  <h3>{{ settings.Monogramming }}</h3>
+                  <p>{{ settings.Monogramming1 }}</p>
+
+                  {% comment %} <input type="range" id="zoom-range" min="1" max="3" step="0.1" value="1"> {% endcomment %}
+                  <div class="monogram-content">
+                    <!-- Image Preview -->
+                    <div class="monogram-image-box">
+                      <div class="zoom-container" id="zoom-container">
+                        <img
+                          id="zoom-image"
+                          src="{{ product.metafields.custom.monogram_image | img_url: '600x' }}"
+                          alt="Monogram Image"
+                        >
+                        <span class="monogram-preview3"></span>
+                      </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="monogram-options">
+                      {% assign font = shop.metaobjects.monogram_fonts.values %}
+                      {% if shop.metaobjects.monogram_fonts.values != blank %}
+                        {% for font in shop.metaobjects.monogram_fonts.values %}
+                          <style>
+                            @font-face {
+                              font-family: '{{ font.font_name.value }}';
+                              src: url('{{ font.font_url1.value }}') format('woff2');
+                              font-display: swap;
+                            }
+                          </style>
+                        {% endfor %}
+                      {% endif %}
+
+                      <label for="monogram-style">{{ settings.Style }}</label>
+                      <select class="monogram-style3" id="monogram-style" name="properties[Monogram Style]">
+                        <option value="" disabled selected>{{ settings.Choose_Style }}</option>
+                        {% for font in shop.metaobjects.monogram_fonts.values %}
+                          <option value="{{ font.font_name.value }}" data-url="{{ font.font_url1.value }}">
+                            {{ font.font_name.value }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                      {% comment %}
+                        <label for="monogram-color">{{ settings.color }}</label>
+                        <div class="custom-select-wrapper">
+                          <div class="custom-select" id="monogram-color">
+                            <div class="custom-select-trigger">
+                              <span class="selected-color">
+                                <span class="color-name">Choose A Color</span>
+                                <span
+                                  class="color-swatch custom-class"
+                                  style="display: none;"
+                                  style="background: {{ color }}"
+                                ></span>
+                              </span>
+                              <div class="arrow"></div>
+                            </div>
+                            <div class="custom-options">
+                              {% if product.metafields.custom.monogram_colors1 != blank %}
+                                {% for color in product.metafields.custom.monogram_colors1.value %}
+                                  <span class="custom-option" data-value="{{ color }}">
+                                    <span class="color-name">{{ color }}</span>
+                                    <span class="color-swatch" style="background: {{ color | downcase }}"></span>
+                                  </span>
+                                {% endfor %}
+                              {% endif %}
+                            </div>
+                          </div>
+                          <input type="hidden" name="properties[Monogram Color]" required>
+                        </div>
+                      {% endcomment %}
+                      <label>{{ settings.Choose_color }}</label>
+                      <select class="monogram-color3" name="properties[Monogram Color]" class="blanket-color">
+                        <option value="" disabled selected>{{ settings.Choose_color }}</option>
+
+                        {% assign color_list = product.metafields.custom.monogram_colors1.value %}
+                        {% if color_list %}
+                          {% for color in color_list %}
+                            <option value="{{ color | escape }}">{{ color }}</option>
+                          {% endfor %}
+                        {% endif %}
+                      </select>
+
+                      <label for="monogram-text">{{ settings['text-cu'] }}</label>
+                      <div class="monogram-text-box">
+                        <input
+                          type="text"
+                          class="monogram-input3"
+                          maxlength="10"
+                          placeholder="Enter monogram"
+                          name="properties[Monogram Text]"
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <p class="monogram-note">
+                    {{ settings.Monogramming2 }}
+                  </p>
+
+                  {% comment %}
+                    <label class="monogram-check" id="monogram-label">
+                      <input type="checkbox" id="monogram-confirm" required>
+                      {{ settings.Monogramming3 }}
+                    </label>
+                  {% endcomment %}
+                </div>
+                <!-- Button (when open, show at bottom) -->
+                <div class="bnt-custom">
+                  <button type="button" id="remove-monogram" class="monogram-btn" style="margin-top:20px;">
+                    {{ settings['Monogramming-bnt'] }}
+                  </button>
+                </div>
+              </div>
+            </div>
+         
+        <div class="product-form__buttons">
+          {%- liquid
+            assign check_against_inventory = true
+            if product.selected_or_first_available_variant.inventory_management != 'shopify' or product.selected_or_first_available_variant.inventory_policy == 'continue'
+              assign check_against_inventory = false
+            endif
+            if product.selected_or_first_available_variant.quantity_rule.min > product.selected_or_first_available_variant.inventory_quantity and check_against_inventory
+              assign quantity_rule_soldout = true
+            endif
+          -%}
+
+
+          <button
+            id="ProductSubmitButton-{{ section_id }}"
+            type="submit"
+            name="add"
+            class="product-form__submit button button--full-width {% if show_dynamic_checkout %}button--secondary{% else %}button--primary{% endif %}"
+            {% if product.selected_or_first_available_variant.available == false
+              or quantity_rule_soldout
+              or product.selected_or_first_available_variant == null
+            %}
+              disabled
+            {% endif %}
+          >
+            <span>
+              {%- if product.selected_or_first_available_variant == null -%}
+                {{ 'products.product.unavailable' | t }}
+              {%- elsif product.selected_or_first_available_variant.available == false or quantity_rule_soldout -%}
+                {{ 'products.product.sold_out' | t }}
+              {%- else -%}
+                {{ 'products.product.add_to_cart' | t }}
+              {%- endif -%}
+            </span>
+            {%- render 'loading-spinner' -%}
+          </button>
+          {%- if show_dynamic_checkout -%}
+            {{ form | payment_button }}
+          {%- endif -%}
+        </div>
+      {%- endform -%}
+    </product-form>
+  {%- else -%}
+    <div class="product-form">
+      <div class="product-form__buttons form">
+        <button
+          type="submit"
+          name="add"
+          class="product-form__submit button button--full-width button--primary"
+          disabled
+        >
+          {{ 'products.product.sold_out' | t }}
+        </button>
+      </div>
+    </div>
+  {%- endif -%}
+
+  {%- if show_pickup_availability -%}
+    {{ 'component-pickup-availability.css' | asset_url | stylesheet_tag }}
+
+    {%- assign pick_up_availabilities = product.selected_or_first_available_variant.store_availabilities
+      | where: 'pick_up_enabled', true
+    -%}
+
+    <pickup-availability
+      class="product__pickup-availabilities quick-add-hidden"
+      {% if product.selected_or_first_available_variant.available and pick_up_availabilities.size > 0 %}
+        available
+      {% endif %}
+      data-root-url="{{ routes.root_url }}"
+      data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+      data-has-only-default-variant="{{ product.has_only_default_variant }}"
+      data-product-page-color-scheme="gradient color-{{ section.settings.color_scheme }}"
+    >
+      <template>
+        <pickup-availability-preview class="pickup-availability-preview">
+          <span class="svg-wrapper">
+            {{- 'icon-unavailable.svg' | inline_asset_content -}}
+          </span>
+          <div class="pickup-availability-info">
+            <p class="caption-large">{{ 'products.product.pickup_availability.unavailable' | t }}</p>
+            <button class="pickup-availability-button link link--text underlined-link">
+              {{ 'products.product.pickup_availability.refresh' | t }}
+            </button>
+          </div>
+        </pickup-availability-preview>
+      </template>
+    </pickup-availability>
+
+    <script src="{{ 'pickup-availability.js' | asset_url }}" defer="defer"></script>
+  {%- endif -%}
+</div>
+<style>
+    .monogram-wrapper h3 {
+      font-weight: 100;
+      font-size: 18px;
+    }
+    .monogram-wrapper p {
+      font-size: 18px;
+      margin-bottom:20px;
+    }
+    .custom-list-image {
+      position:relative;
+    }
+    .custom-tag {
+        position: absolute;
+        z-index: 99;
+        top: 2%;
+        left: 15px;
+    }
+    .Product__Tag--bestseller1 {
+            background: #dde6f5;
+        left: 20px;
+        top: 20px;
+        font-size: 14px;
+        padding: 5px 10px;
+        width: 60px;
+        text-align:center;
+        text-transform: uppercase;
+        font-size: 12px !important;
+        font-family: sweet-sans-pro, sans-serif !important;
+        font-weight: 600 !important;
+    }
+    .stamped-badge-caption[data-reviews][data-label][data-version="2"]>span {
+          text-transform: capitalize!important;
+    }
+    .fa-star-half-o:before, .fa-star-o:before, .fa-star:before, .stamped-fa-star-half-o:before, .stamped-fa-star-o:before, .stamped-fa-star:before {
+        font-size: 18px;
+        color: #000!important;
+        margin-right: -1px;
+    }
+    .summary-rating-bar-content {
+        background: #000!important;
+    }
+    .product-info .custom-color-swatch {
+      width:43px;
+      height:43px;
+    }
+    .accordion__toggle {
+          font-size:18px;
+    }
+    .animated-plus {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+
+    /* Jab details open ho, arrow rotate ho jaye */
+    details[open] .animated-plus {
+      transform: rotate(180deg);
+    }
+    .announcement-bar .heading {
+      font-size:17px;
+    }
+    .announcement-bar  {
+      line-height:30px;
+    }
+    /* .custom-bg-image {
+        background: url(//www.petite-plume.com/cdn/shop/files/bg-pattern-2.jpg?v=1711488921);
+        background-size: cover;
+        padding-top:50px!important;
+        padding-bottom:50px!important;
+    } */
+    .brand-line--container {
+         margin: -30px auto 20px;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+    }
+    {% comment %} @font-face {
+      font-family:"Garamond_Premier_Pro_Display";
+      src: url("https://cdn.shopify.com/s/files/1/0953/3662/8571/files/Garamond_Premier_Pro_Display.otf?v=1755577542") format("opentype");
+      font-weight: normal;
+      font-style: normal;
+    }
+    {% comment %} .heading, .h1, .h2, .h3, .h4, .h5, .h6, .prose :where(h1,h2,h3,h4,h5,h6) {
+         font-family:"Garamond_Premier_Pro_Display"!important;
+    }
+    body {
+         font-family:"Garamond_Premier_Pro_Display"!important;
+    } {% endcomment %} {% endcomment %}
+    .custom-icon-feature {
+        flex-wrap: inherit;
+        gap: 0.5rem;
+        display: flex
+    }
+    .custom-icon-feature .feature-badge {
+        display:block;
+    }
+    .custom-icon-feature .feature-badge  p{
+        text-align:center;
+        line-height: 1.2;
+        margin-top: 20px;
+    }
+    .custom-icon-feature .constrained-image {
+        margin:auto;
+
+    }
+    .monogram-btn
+    {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #000;
+        color: #13294b;
+        font-family: sweet-sans-pro, sans-serif;
+        cursor: pointer;
+        letter-spacing: 1px;
+        margin: 15px 0;
+    }
+    .monogram-btn {
+      color: #000; /* Text navy blue */
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 12px 40px;
+      font-weight:700;
+      border-radius:6px;
+          {% comment %} border: 1.6px solid #000;
+        outline: 1.6px solid #000; {% endcomment %}
+        outline-offset: -4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .monogram-content { display: flex; gap: 20px; align-items: flex-start; }
+    .monogram-image img { max-width: 200px; border: 1px solid #ccc; border-radius: 6px; }
+    .monogram-options { flex: 1; }
+    .monogram-options label { display:block; margin-top:10px; font-size: 14px; }
+    .monogram-options select,
+    .monogram-options input { width:100%; padding:10px; margin-top:5px; border:1px solid #ccc;  }
+    .monogram-note { font-size: 20px;
+
+        margin-top: 15px; }
+    .monogram-check { margin-top: 15px;
+        display: flex;
+        align-items: center; }
+    .monogram-price { font-weight: bold; }
+
+    .monogram-image-box {
+      position: relative;
+      display: inline-block;
+    }
+
+    .monogram-image-box img {
+      max-width:100%;
+      padding-right:10px;
+    }
+
+    /* #monogram-preview {
+      position: absolute;
+      top:30%;
+      left: 52%;
+      transform: translate(-50%, -50%);
+      font-size: 26px;
+      font-weight: bold;
+      color: black;
+      white-space: nowrap;
+      pointer-events: none;
+    } */
+
+    .monogram-options label {
+        display: block;
+        /* font-weight: 600; */
+        font-size: 15px;
+        margin: 10px 0 5px;
+        text-transform: capitalize;
+    }
+    .monogram-options select, .monogram-options input {
+        width: 100%;
+        padding: 10px;
+        font-size:14px;
+        margin-top: 5px;
+        height:50px;
+        border: 1px solid #ccc;
+
+    }
+
+    .monogram-text-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .monogram-text-box input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    .text-subdued li {
+    list-style: none;
+    margin-left: -14px;
+    font-size: 15px;
+    }
+    #char-count {
+      margin-left: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .monogram-image-box {
+      max-width: 300px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .monogram-image-wrapper {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .monogram-image-wrapper img {
+      width: 100%;
+      height: auto;
+      transition: transform 0.2s ease;
+    }
+
+    /* #monogram-preview {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      font-weight: bold;
+      color: #13294B;
+      pointer-events: none;
+    } */
+
+    .monogram-image-box {
+      position: relative;
+      width: 400px;
+      overflow: hidden;
+    }
+
+    .monogram-image-box img {
+      width: 100%;
+      transition: transform 0.3s ease;
+    }
+
+    #zoom-range {
+      width: 200px;
+      margin: 10px 0;
+    }
+
+    .monogram-image-box {
+      position: relative;
+      width: 400px;
+      overflow: hidden;
+    }
+
+    .zoom-container {
+      display: inline-block;
+      transition: transform 0.3s ease;
+      transform-origin: center center;
+      position: relative;
+    }
+
+    .zoom-container img {
+      width: 100%;
+      display: block;
+    }
+
+    #monogram-preview {
+      position: absolute;
+       top: 33%;
+      left: 60%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: red;
+      pointer-events: none;
+    }
+
+    #zoom-range {
+      width: 200px;
+      margin: 10px 0;
+    }
+
+
+
+
+    /* Base */
+    #zoom-range{
+      -webkit-appearance: none;
+      width:100px;           /* adjust to your layout */
+      background: transparent;
+      outline: none;
+    }
+
+    /* Track — WebKit */
+    #zoom-range::-webkit-slider-runnable-track{
+      height:2px;
+      background: #e5e5e5;    /* light grey */
+      border-radius: 999px;
+    }
+
+    /* Thumb — WebKit */
+    #zoom-range::-webkit-slider-thumb{
+      -webkit-appearance: none;
+      height:15px;
+      width:15px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 0;
+      box-shadow:
+        0 1px 3px rgba(0,0,0,.25),
+        inset 0 0 0 1px rgba(0,0,0,.08);
+      margin-top: -7px;       /* centers thumb over 4px track */
+      cursor: pointer;
+    }
+
+    /* Track — Firefox */
+    #zoom-range::-moz-range-track{
+      height: 4px;
+      background: #e5e5e5;
+      border: 0;
+      border-radius: 999px;
+    }
+
+    /* Thumb — Firefox */
+    #zoom-range::-moz-range-thumb{
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 0;
+    }
+    {% comment %} .monogram-btn:hover {
+        border: 1.6px solid #0a2a4a;
+        outline: 1.6px solid #0a2a4a;
+        outline-offset: -4px;
+    } {% endcomment %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /* Add-monogram css   */
+      .monogram-preview-box {
+        margin-top: 10px;
+        font-size: 32px;
+        font-weight: bold;
+      }
+    .custom-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 5px;
+    }
+    .custom-select-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      height:50px;
+      padding: 5px;
+      border: 1px solid #ddd;
+    }
+    .selected-color {
+      display: flex;
+      align-items: center;
+    }
+    .custom-select-wrapper {
+      position: relative;
+      width: 220px;
+      user-select: none;
+    }
+    .custom-select {
+      position: relative;
+      background: #fff;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .custom-select-trigger {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+    }
+    .custom-select-trigger .arrow {
+      border: solid black;
+      border-width: 0 2px 2px 0;
+      display: inline-block;
+      padding: 3px;
+      transform: rotate(45deg);
+      margin-left: 5px;
+    }
+    .custom-options {
+      display: none;
+       position: absolute;
+        top: 100%;
+        left: 0;
+        overflow: auto;
+        /* height: 200px; */
+        max-height: 12rem;
+        right: 0;
+        background: #fff;
+        border: 1px solid #ccc;
+        z-index: 5;
+    }
+    .custom-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .custom-option:hover {
+      background: #f2f2f2;
+    }
+
+      #monogram-preview {
+        display: block;
+        margin-top: 10px;
+        font-size:18px;
+        font-weight: bold;
+      }
+    /* .product-addon-container-gm {
+       visibility: hidden;
+        margin-top: -8rem;
+    } */
+
+    /* Sirf 600px se chhoti screens */
+    @media (max-width:767px) {
+     .custom-tag {
+        position: absolute;
+        z-index: 99;
+        top: 2%;
+        left: -5px;
+    }
+    .zoom-container span
+    {
+    position: absolute;
+    top: 80px!important;
+    right: 40px!important;
+    font-size: 20px!important;
+    transform: translate(-50%, -50%);
+  }
+  .monogram-options select, .monogram-options input {
+    height: 45px;
+  }
+    .popup-product-info {
+      display:block;
+    }
+    .monogram-content {
+      display:block;
+    }
+    .zoom-container img
+    {
+    width: 80%;
+    margin: auto;
+    padding: 0px;
+    }
+    .monogram-options label {
+    margin-top: 14px;
+    font-size:14px;
+    }
+    .monogram-wrapper p {
+    font-size: 14px;
+    }
+    .monogram-wrapper h3 {
+    font-size: 17px;
+    }
+    .monogram-text-box input {
+      font-size: 13px;
+    }
+    .monogram-options select, .monogram-options input {
+      font-size: 13px;
+    }
+    .Product__Tag--bestseller {
+       padding: 5px 15px;
+        text-transform: uppercase;
+        font-size: 10px !important;
+        border-radius: 5px;
+    }
+    .Product__Tag--bestseller1 {
+       padding: 5px 15px;
+        text-transform: uppercase;
+        font-size: 10px !important;
+        border-radius: 5px;
+    }
+    .product-info .product-title {
+      text-align:left;
+    }
+        .product-info--center :is(.badge-list,.price-list,.rating-badge) {
+            justify-content:left!important;
+        }
+        .custom-icon-feature .feature-badge p {
+        text-align: center;
+        font-size: 15px;
+        }
+
+
+
+        .product-gallery__image-list .product-gallery__carousel {
+        grid:var(--product-gallery-carousel-grid, auto / auto-flow 100%)!important;
+    }
+    }
+    #monogram-confirm {
+        width: 19px;
+        height: 19px;
+        margin-right: 15px;
+    }
+
+    .quick-buy-modal__info-wrapper .monogram-wrapper {
+     display:none;
+    }
+
+    .quick-buy-modal__info-wrapper .custom-buy {
+     display:none;
+    }
+    .quick-buy-modal__info-wrapper .custom-disply {
+     display:block;
+    }
+    .custom-disply {
+    display:none;
+    }
+    .custom-class {
+      margin-left:15px;
+    }
+
+    .home-page .ghhg {
+        display:none!important;;
+    }
+    .home-pag .monogram-wrapper {
+        display:none!important;
+    }
+    .monogram-wrapper .color-swatch {
+    display: inline-block;
+       width: 26px;
+      height: 26px;
+    border-radius: 50%;
+    margin-right: 5px;
+      border: 2px solid #dcdfe4;
+    vertical-align: middle;
+  }
+  .monogram-wrapper .custom-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 5px;
+  }
+</style>
+  <script>
+    document.getElementById('monogram-style').addEventListener('change', function () {
+      let selectedOption = this.options[this.selectedIndex];
+      let fontName = selectedOption.value;
+      let fontUrl = selectedOption.getAttribute('data-url');
+
+      if (fontUrl) {
+        let oldFont = document.getElementById('dynamicFont');
+        if (oldFont) oldFont.remove();
+        let style = document.createElement('style');
+        style.id = 'dynamicFont';
+        style.innerHTML = `
+        @font-face {
+          font-family: '${fontName}';
+          src: url('${fontUrl}');
+        }
+      `;
+        document.head.appendChild(style);
+        document.getElementById('monogram-preview').style.fontFamily = fontName;
+      }
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const removeBtn = document.getElementById('remove-monogram');
+
+      removeBtn.addEventListener('click', function () {
+        // Reset style dropdown
+        const styleSelect = document.getElementById('monogram-style');
+        if (styleSelect) {
+          styleSelect.selectedIndex = 0; // back to "Choose a style"
+        }
+
+        // Reset color
+        const colorHidden = document.querySelector('input[name="properties[Monogram Color]"]');
+        const colorName = document.querySelector('.selected-color .color-name');
+        const colorSwatch = document.querySelector('.selected-color .color-swatch');
+
+        if (colorHidden && colorName && colorSwatch) {
+          colorHidden.value = '';
+          colorName.textContent = 'Choose Color';
+          colorSwatch.style.background = 'transparent';
+        }
+
+
+    });
+  </script>
+
+
+<style>
+  .accordion {
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+    width:100%;
+  }
+
+  .accordion-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .accordion-arrow {
+    transition: transform 0.3s ease;
+    font-size: 18px;
+  }
+
+  .accordion.open .accordion-arrow {
+    transform: rotate(180deg);
+  }
+
+  .accordion-content {
+    display: none;
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .accordion.open .accordion-content {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .zoom-container span {
+    position: absolute;
+    top: 90px;
+    right:60px;
+    font-size:24px;
+    transform: translate(-50%, -50%);
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const accordions = document.querySelectorAll('.accordion');
+
+    // Open the first accordion by default
+    if (accordions.length > 0) {
+      accordions[0].classList.add('open');
+    }
+
+    // Toggle open/close when clicking headers
+    accordions.forEach((acc) => {
+      const header = acc.querySelector('.accordion-header');
+      header.addEventListener('click', function () {
+        acc.classList.toggle('open');
+      });
+    });
+  });
+</script>
+{% comment %} Add-Monogram js (only toggle open/close) {% endcomment %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const addBtn = document.getElementById('toggle-monogram');
+    const removeBtn = document.getElementById('remove-monogram');
+    const monogramBox = document.getElementById('monogram-box');
+
+    if (!addBtn || !removeBtn || !monogramBox) return;
+
+    // Show monogram box when Add clicked
+    addBtn.addEventListener('click', function () {
+      monogramBox.style.display = 'block';
+      addBtn.style.display = 'none';
+    });
+
+    // Hide monogram box when Remove clicked
+    removeBtn.addEventListener('click', function () {
+      monogramBox.style.display = 'none';
+      addBtn.style.display = 'block';
+    });
+  });
+</script>
+
+<script>
+  const zoomRange = document.getElementById('zoom-range');
+  const zoomContainer = document.getElementById('zoom-container');
+
+  zoomRange.addEventListener('input', function () {
+    let scale = this.value;
+    zoomContainer.style.transform = `scale(${scale})`;
+  });
+</script>
+
+<!-- Style -->
+<style>
+  .monogram-preview {
+    display: inline-block;
+    font-size: 28px;
+    font-weight: 500;
+    margin-top: 10px;
+    color: black;
+    transition: all 0.3s ease;
+  }
+  .monogram-text-box input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 16px;
+  }
+    .blanket-options {
+    margin-bottom: 20px;
+  }
+  .blanket-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0;
+  }
+  .blanket-label {
+    font-weight: bold;
+  }
+  .blanket-color,
+  .blanket-size {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  .accordion-arrow1 {
+  color: black;
+    width: 20px;
+    height: 20px;
+  }
+  .accordion-header span {
+    font-size:20px;
+    font-weight: 100;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.querySelector('.monogram-input');
+    const preview = document.querySelector('.monogram-preview');
+    const colorSelect = document.querySelector('.monogram-color');
+    const styleSelect = document.querySelector('.monogram-style');
+
+    // Update text live
+    input.addEventListener('input', () => {
+      preview.textContent = input.value;
+    });
+
+    // Change color
+    colorSelect.addEventListener('change', () => {
+      const color = colorSelect.value.toLowerCase();
+      preview.style.color = color;
+    });
+
+    // Change font style
+    styleSelect.addEventListener('change', () => {
+      const selectedOption = styleSelect.options[styleSelect.selectedIndex];
+      const fontName = selectedOption.value;
+      const fontURL = selectedOption.dataset.url;
+
+      if (fontURL && fontName) {
+        const fontFace = new FontFace(fontName, `url(${fontURL})`);
+        fontFace
+          .load()
+          .then(function (loadedFace) {
+            document.fonts.add(loadedFace);
+            preview.style.fontFamily = `"${fontName}"`;
+          })
+          .catch((err) => console.error('Font loading failed:', err));
+      }
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.querySelector('.monogram-input1');
+    const preview = document.querySelector('.monogram-preview1');
+    const colorSelect = document.querySelector('.monogram-color1');
+    const styleSelect = document.querySelector('.monogram-style1');
+
+    // Update text live
+    input.addEventListener('input', () => {
+      preview.textContent = input.value;
+    });
+
+    // Change color
+    colorSelect.addEventListener('change', () => {
+      const color = colorSelect.value.toLowerCase();
+      preview.style.color = color;
+    });
+
+    // Change font style
+    styleSelect.addEventListener('change', () => {
+      const selectedOption = styleSelect.options[styleSelect.selectedIndex];
+      const fontName = selectedOption.value;
+      const fontURL = selectedOption.dataset.url;
+
+      if (fontURL && fontName) {
+        const fontFace = new FontFace(fontName, `url(${fontURL})`);
+        fontFace
+          .load()
+          .then(function (loadedFace) {
+            document.fonts.add(loadedFace);
+            preview.style.fontFamily = `"${fontName}"`;
+          })
+          .catch((err) => console.error('Font loading failed:', err));
+      }
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.querySelector('.monogram-input2');
+    const preview = document.querySelector('.monogram-preview2');
+    const colorSelect = document.querySelector('.monogram-color2');
+    const styleSelect = document.querySelector('.monogram-style2');
+
+    // Update text live
+    input.addEventListener('input', () => {
+      preview.textContent = input.value;
+    });
+
+    // Change color
+    colorSelect.addEventListener('change', () => {
+      const color = colorSelect.value.toLowerCase();
+      preview.style.color = color;
+    });
+
+    // Change font style
+    styleSelect.addEventListener('change', () => {
+      const selectedOption = styleSelect.options[styleSelect.selectedIndex];
+      const fontName = selectedOption.value;
+      const fontURL = selectedOption.dataset.url;
+
+      if (fontURL && fontName) {
+        const fontFace = new FontFace(fontName, `url(${fontURL})`);
+        fontFace
+          .load()
+          .then(function (loadedFace) {
+            document.fonts.add(loadedFace);
+            preview.style.fontFamily = `"${fontName}"`;
+          })
+          .catch((err) => console.error('Font loading failed:', err));
+      }
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.querySelector('.monogram-input3');
+    const preview = document.querySelector('.monogram-preview3');
+    const colorSelect = document.querySelector('.monogram-color3');
+    const styleSelect = document.querySelector('.monogram-style3');
+
+    // Update text live
+    input.addEventListener('input', () => {
+      preview.textContent = input.value;
+    });
+
+    // Change color
+    colorSelect.addEventListener('change', () => {
+      const color = colorSelect.value.toLowerCase();
+      preview.style.color = color;
+    });
+
+    // Change font style
+    styleSelect.addEventListener('change', () => {
+      const selectedOption = styleSelect.options[styleSelect.selectedIndex];
+      const fontName = selectedOption.value;
+      const fontURL = selectedOption.dataset.url;
+
+      if (fontURL && fontName) {
+        const fontFace = new FontFace(fontName, `url(${fontURL})`);
+        fontFace
+          .load()
+          .then(function (loadedFace) {
+            document.fonts.add(loadedFace);
+            preview.style.fontFamily = `"${fontName}"`;
+          })
+          .catch((err) => console.error('Font loading failed:', err));
+      }
+    });
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function setupBlanketVisibility() {
+      const blanketOptions = document.querySelector('.blanket-options');
+      const monogramTab = document.querySelector('.mogogram-tab-first-bln');
+      const monogramInput = document.getElementById('monogramInput');
+      const addMonogramBtn = document.getElementById('toggle-monogram'); // "Add Monogram" button
+
+      if (!blanketOptions || !monogramInput || !addMonogramBtn) return;
+
+      const blanketRows = blanketOptions.querySelectorAll('.blanket-row');
+      const bundleRadios = document.querySelectorAll('input[name^="kaching-bundles-deal"]');
+
+      let selectedValue = '';      // current bundle (1, 2, 3)
+      let monogramActivated = false; // only becomes true after first click
+
+      // Hide all initially
+      blanketOptions.style.display = 'none';
+      blanketRows.forEach((row) => (row.style.display = 'none'));
+
+      if (bundleRadios.length === 0) return;
+
+      // Bundle selection handler
+      bundleRadios.forEach((radio) => {
+        radio.addEventListener('change', function () {
+          const selectedBar = this.closest('.kaching-bundles__bar');
+          if (!selectedBar) return;
+
+          const titleEl = selectedBar.querySelector('.kaching-bundles__bar-title');
+          const titleText = titleEl ? titleEl.textContent.trim().toLowerCase() : '';
+
+          // Reset display
+          blanketOptions.style.display = 'none';
+          blanketRows.forEach((row) => (row.style.display = 'none'));
+          if (monogramTab) monogramTab.style.display = '';
+
+          // Determine which bundle
+          if (titleText.includes('single')) {
+            selectedValue = '1';
+            blanketOptions.style.display = 'none';
+          } else if (titleText.includes('2 blanket')) {
+            selectedValue = '2';
+            blanketOptions.style.display = 'block';
+            blanketRows[0].style.display = 'flex';
+            blanketRows[1].style.display = 'flex';
+            if (monogramTab) monogramTab.style.display = 'none';
+          } else if (titleText.includes('3 blanket')) {
+            selectedValue = '3';
+            blanketOptions.style.display = 'block';
+            blanketRows[0].style.display = 'flex';
+            blanketRows[1].style.display = 'flex';
+            blanketRows[2].style.display = 'flex';
+            if (monogramTab) monogramTab.style.display = 'none';
+          } else {
+            selectedValue = '';
+          }
+
+          // ✅ If monogram already activated, update automatically
+          if (monogramActivated && monogramInput) {
+            monogramInput.value = selectedValue;
+            console.log('Auto-updated monogram value:', selectedValue);
+          }
+        });
+      });
+
+      // First click activates monogram tracking
+      addMonogramBtn.addEventListener('click', function () {
+        monogramActivated = true;
+        if (selectedValue) {
+          monogramInput.value = selectedValue;
+          console.log('Monogram activated with value:', selectedValue);
+        }
+      });
+
+      // Handle pre-selected bundle on load
+      const checked = document.querySelector('input[name^="kaching-bundles-deal"]:checked');
+      if (checked) checked.dispatchEvent(new Event('change'));
+    }
+
+    // Wait until bundle options exist
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('input[name^="kaching-bundles-deal"]')) {
+        setupBlanketVisibility();
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+</script>
+
+ 

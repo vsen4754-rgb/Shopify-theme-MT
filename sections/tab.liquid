@@ -1,0 +1,58 @@
+{%  if section.blocks.size > 0 %} 
+    {%  if section.settings.title != blank %}
+      ## {{ section.settings.title }}
+    {%  endif  %}
+{%  for block in section.blocks %}
+       {%  assign collection = collections[block.settings.collection] %}
+        - {{ collection.title  }}
+        {%  capture content  %}
+               {%- for product in block.settings.collection.products limit: 8 -%}
+               - {% render 'card-product',
+                        card_product: product,
+                        media_aspect_ratio: section.settings.image_ratio,
+                        image_shape: section.settings.image_shape,
+                        show_secondary_image: section.settings.show_secondary_image,
+                        show_vendor: section.settings.show_vendor,
+                        show_rating: section.settings.show_rating,
+                        show_quick_add: section.settings.enable_quick_add,
+                        section_id: section.id
+                      %}
+              {%- endfor -%}
+           {%  endcapture %}
+        {%  assign tabContent = tabContent | append: content %}
+      {%  endfor %}  
+{%  endif %}  
+{% schema %}
+  {
+    "name": "Tabs",
+    "settings": [
+      {
+        "type": "text",
+        "id": "title",
+        "label": "Title"
+      }
+    ],
+    "blocks": [
+    {
+      "type": "tab",
+      "name": "Tab",
+      "limit": 5,
+    
+    "settings": [
+      {
+        "type": "collection",
+        "id": "collection",
+        "label": "Collection"
+      }
+    ]
+  
+    }
+  ],
+    "presets": [
+    {
+      "name": "Tabs",
+      "blocks": []
+    }
+  ]
+  }
+{% endschema %}
